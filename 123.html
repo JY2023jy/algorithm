@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enigma Machine with Encoding & Decoding</title>
+    <style>
+        #keyboard { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; max-width: 600px; margin: 20px auto; }
+        button { padding: 15px; font-size: 16px; cursor: pointer; }
+        #controls, #output { margin-top: 20px; font-size: 18px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h2>Enigma Machine - Typewriter Simulation</h2>
+    
+    <!--초기 로터 위치 입력창 / 인코딩/디코딩 선택창 / 입력 초기화 버튼 생성-->
+    <div id="controls">  
+        <label for="rotorPositions">초기 로터 위치 (예: 1 0 3):</label>
+        <input type="text" id="rotorPositions" placeholder="1 0 3">
+        
+        <label for="operation">작업 선택:</label>
+        <select id="operation">
+            <option value="E">인코딩</option>
+            <option value="D">디코딩</option>
+        </select>
+        
+        <button onclick="resetOutput()">입력 초기화</button>
+    </div>
+
+
+    <!--A~Z까지 키보드 버튼 구현-->
+    <div id="keyboard">
+        <button onclick="typeKey('A')">A</button>
+        <button onclick="typeKey('B')">B</button>
+        <button onclick="typeKey('C')">C</button>
+        <button onclick="typeKey('D')">D</button>
+        <button onclick="typeKey('E')">E</button>
+        <button onclick="typeKey('F')">F</button>
+        <button onclick="typeKey('G')">G</button>
+        <button onclick="typeKey('H')">H</button>
+        <button onclick="typeKey('I')">I</button>
+        <button onclick="typeKey('J')">J</button>
+        <button onclick="typeKey('K')">K</button>
+        <button onclick="typeKey('L')">L</button>
+        <button onclick="typeKey('M')">M</button>
+        <button onclick="typeKey('N')">N</button>
+        <button onclick="typeKey('O')">O</button>
+        <button onclick="typeKey('P')">P</button>
+        <button onclick="typeKey('Q')">Q</button>
+        <button onclick="typeKey('R')">R</button>
+        <button onclick="typeKey('S')">S</button>
+        <button onclick="typeKey('T')">T</button>
+        <button onclick="typeKey('U')">U</button>
+        <button onclick="typeKey('V')">V</button>
+        <button onclick="typeKey('W')">W</button>
+        <button onclick="typeKey('X')">X</button>
+        <button onclick="typeKey('Y')">Y</button>
+        <button onclick="typeKey('Z')">Z</button>
+    </div>
+
+
+    <!--인코딩/디코딩된 메시지 표시-->
+    <div id="output">Output: <span id="encodedMessage"></span></div>
+
+    <script>
+        class EnigmaMachine {   //로터가 3개인 에니그마 동작
+            constructor(rotors, reflector) {
+                this.rotors = rotors;
+                this.reflector = reflector;
+                this.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                this.rotorPositions = [0, 0, 0];
+                this.initialRotorPositions = [0, 0, 0];
+            }
+
+            setRotorPositions(positions) { //사용자가 입력한 로터 위치 설정
+                this.rotorPositions = [...positions]; 
+                this.initialRotorPositions = [...positions];
+            }
+
+            resetRotorPositions() { //로터초기화
+                this.rotorPositions = [...this.initialRotorPositions];
+            }
+
+            rotateRotors() { //메시지를 인코딩/디코딩 할 때 로터 회전(각 로터는 26글자마다 한번 회전)
+                for (let i = 0; i < this.rotors.length; i++) {
+                    this.rotorPositions[i] = (this.rotorPositions[i] + 1) % 26;
+                    if (this.rotorPositions[i] !== 0) break;
+                }
+            }
+
+            encodeChar(char) { //로터와 반사기를 통해 최종적으로 인코딩된 문자 반환
+                let index = this.alphabet.indexOf(char);
+
+                for (let i = 0; i < this.rotors.length; i++) {
+                    index = (index + this.rotorPositions[i]) % 26;
+                    char = this.rotors[i][index];
+                    index = this.alphabet.indexOf(char);
+                }
+
+                char = this.reflector[index];
+                index = this.alphabet.indexOf(char);
+
+                for (let i = this.rotors.length - 1; i >= 0; i--) {
+                    index = this.rotors[i].indexOf(this.alphabet[index]);
+                    index = (index - this.rotorPositions[i] + 26) % 26;
+                }
+
+                this.rotateRotors();
+                return this.alphabet[index];
+            }
+
+            encodeMessage(message) { //문자단위로 인코딩, 전체메시지 반환
+                let encodedMessage = "";
+                for (let char of message.toUpperCase()) {
+                    encodedMessage += this.encodeChar(char);
+                }
+                return encodedMessage;
+            }
+        }
+
+        const rotors = [
+            "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+            "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+            "BDFHJLCPRTXVZNYEIWGAKMUSQO"
+        ];
+        const reflector = "YRUHQSLDPXNGOKMIEBFZCWVJAT";
+        const enigma = new EnigmaMachine(rotors, reflector);
+
+        function resetOutput() {
+            document.getElementById("encodedMessage").textContent = "";
+            const rotorPositionsInput = document.getElementById("rotorPositions").value;
+            const positions = rotorPositionsInput.split(" ").map(Number);
+            enigma.setRotorPositions(positions);
+        }
+
+        function typeKey(char) { //사용자가 키보드 버튼 클릭시 호출
+            const operation = document.getElementById("operation").value;
+
+            // Reset rotor positions before each encode/decode operation
+            enigma.resetRotorPositions();
+
+            let output = enigma.encodeChar(char);
+
+            document.getElementById("encodedMessage").textContent += output;
+        }
+    </script>
+</body>
+</html>
